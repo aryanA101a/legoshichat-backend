@@ -15,7 +15,7 @@ paths:
   /create-account:
     post:
       summary: Create a new user account
-      description: Endpoint for creating a user account with JWT token generation.
+      description: Create a new user account and a JWT token.
       tags:
         - "auth"
       requestBody:
@@ -23,18 +23,8 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                phoneNumber:
-                  type: string
-                password:
-                  type: string
-              required:
-                - name
-                - phoneNumber
-                - password
+              $ref: "#/components/schemas/User"
+
       responses:
         "201":
           description: Account created successfully
@@ -45,7 +35,7 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Account created successfully
+                    description: Account created successfully
                   token:
                     type: string
                     example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
@@ -54,23 +44,15 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: Bad Request
-                  
+                $ref: "#/components/schemas/ApiError"
+
         "500":
           description: Internal Server Error - Something went wrong on the server
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: Internal Server Error
-                  
+                $ref: "#/components/schemas/ApiError"
+
   /login:
     post:
       summary: User Login
@@ -93,7 +75,7 @@ paths:
                 - phoneNumber
                 - password
       responses:
-        '200':
+        "200":
           description: Successfully Authenticated
           content:
             application/json:
@@ -106,29 +88,25 @@ paths:
                   message:
                     type: string
                     example: Successfully authenticated.
-        '401':
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-        '500':
+                $ref: "#/components/schemas/ApiError"
+        "500":
           description: Internal Server Error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-  /message/send:
+                $ref: "#/components/schemas/ApiError"
+  /message/sendById:
     post:
-      summary: Send Message
+      summary: Send Message by Recipient ID
       description: |
-        Send a message to a user.
+        Send a message to a user using recipientId
+      tags:
+        - "message"
       requestBody:
         required: true
         content:
@@ -136,19 +114,19 @@ paths:
             schema:
               type: object
               properties:
-                message:
+                content:
                   type: string
                   description: The message to be sent.
-                to:
+                recipientId:
                   type: string
-                  description: The recipient's phone number.
+                  description: The recipient's user ID.
               required:
-                - message
-                - to
+                - content
+                - recipientId
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Message Sent Successfully
           content:
             application/json:
@@ -157,40 +135,352 @@ paths:
                 properties:
                   message:
                     type: string
-                    description: Message sent successfully.
-        '400':
+                    example: Message sent successfully.
+        "400":
           description: Bad Request
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    description: Description of the error.
-        '401':
+                $ref: "#/components/schemas/ApiError"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    description: Description of the authentication error.
-        '500':
+                $ref: "#/components/schemas/ApiError"
+        "500":
           description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /message/sendByPhoneNumber:
+    post:
+      summary: Send Message by Phone Number
+      description: |
+        Send a message to a user using recipient's Phone Number
+      tags:
+        - "message"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  description: The message to be sent.
+                recipientPhoneNumber:
+                  type: string
+                  description: The recipient's user ID.
+              required:
+                - content
+                - recipientPhoneNumber
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Message Sent Successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  error:
+                  message:
                     type: string
-                    description: Description of the internal server error.
+                    example: Message sent successfully.
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 
+  /messages:
+    post:
+      summary: Get Messages by Recipient ID
+      description: |
+        Retrieve messages of a specific recipient in pages.
+      tags:
+        - "message"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipientId:
+                  type: string
+                  description: The recipient's ID.
+              required:
+                - recipientId
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Messages Retrieved Successfully
+          content:
+            application/json:
+              schema:
+                properties:
+                  page:
+                    type: number
+                  lastPage:
+                    type: boolean
+                  messages:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ChatMessage"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /message/{id}:
+    get:
+      summary: Get Message by ID
+      description: |
+        Retrieve a message by its ID.
+      tags:
+        - "message"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the message to retrieve.
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Message Retrieved Successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+        "404":
+          description: Message Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+    delete:
+      summary: Delete Message by ID
+      description: |
+        Delete a message by its ID.
+      tags:
+        - "message"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the message to delete.
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Message Deleted Successfully
+        "404":
+          description: Message Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    put:
+      summary: Update Message by ID
+      description: |
+        Update a message by its ID.
+      tags:
+        - "message"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the message to update.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  description: The updated content of the message.
+              required:
+                - content
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Message Updated Successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+        "404":
+          description: Message Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /friends:
+    get:
+      summary: Retrieve Friends for User
+      description: |
+        Retrieve a list of friends of the authorized user in pages.
+      tags:
+        - "friends"
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Friends Retrieved Successfully
+          content:
+            application/json:
+              schema:
+                properties:
+                  page:
+                    type: number
+                  lastPage:
+                    type: boolean
+                  friends:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        "404":
+          description: User Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 
 components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phoneNumber:
+          type: string
+        password:
+          type: string
+      required:
+        - name
+        - phoneNumber
+        - password
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The ID of the message.
+        content:
+          type: string
+          description: The content of the message.
+        from:
+          type: string
+          description: The sender's ID.
+        to:
+          type: string
+          description: The recipient's ID.
+        timestamp:
+          type: string
+          format: date-time
+          description: The timestamp when the message was sent.
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+
   securitySchemes:
     bearerAuth:
       type: http
