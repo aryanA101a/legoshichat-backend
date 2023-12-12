@@ -33,9 +33,9 @@ paths:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
-                    description: Account created successfully
+                  user:
+                    type:
+                    $ref: "#/components/schemas/User"
                   token:
                     type: string
                     example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
@@ -44,14 +44,18 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
 
         "500":
           description: Internal Server Error - Something went wrong on the server
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
 
   /login:
     post:
@@ -82,24 +86,29 @@ paths:
               schema:
                 type: object
                 properties:
+                  user:
+                      type:
+                      $ref: "#/components/schemas/User"
                   token:
                     type: string
                     example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
-                  message:
-                    type: string
-                    example: Successfully authenticated.
+                  
         "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "500":
           description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
   /message/sendById:
     post:
       summary: Send Message by Recipient ID
@@ -134,26 +143,32 @@ paths:
                 type: object
                 properties:
                   message:
-                    type: string
-                    example: Message sent successfully.
+                    type:
+                    $ref: "#/components/schemas/ChatMessage"
         "400":
           description: Bad Request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "500":
           description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
 
   /message/sendByPhoneNumber:
     post:
@@ -189,26 +204,32 @@ paths:
                 type: object
                 properties:
                   message:
-                    type: string
-                    example: Message sent successfully.
+                    type:
+                    $ref: "#/components/schemas/ChatMessage"
         "400":
           description: Bad Request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "500":
           description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
 
   /messages:
     post:
@@ -251,19 +272,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "500":
           description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
   /message/{id}:
     get:
       summary: Get Message by ID
@@ -286,25 +313,35 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ChatMessage"
+                type: object
+                properties:
+                  message:
+                    type:
+                    $ref: "#/components/schemas/ChatMessage"
         "404":
           description: Message Not Found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "500":
           description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
 
     delete:
       summary: Delete Message by ID
@@ -329,19 +366,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "500":
           description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
     put:
       summary: Update Message by ID
       description: |
@@ -375,31 +418,41 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ChatMessage"
+                type: object
+                properties:
+                  message:
+                    type:
+                    $ref: "#/components/schemas/ChatMessage"
         "404":
           description: Message Not Found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "500":
           description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
 
   /friends:
     get:
-      summary: Retrieve Friends for User
+      summary: Retrieve Friends of User
       description: |
-        Retrieve a list of friends of the authorized user in pages.
+        Retrieve a list of friends of authorized in pages.
       tags:
         - "friends"
       security:
@@ -424,19 +477,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
         "500":
           description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
 
 components:
   schemas:
@@ -475,10 +534,10 @@ components:
           type: string
           format: date-time
           description: The timestamp when the message was sent.
-    ApiError:
+    Error:
       type: object
       properties:
-        error:
+        message:
           type: string
 
   securitySchemes:
