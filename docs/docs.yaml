@@ -10,7 +10,7 @@ info:
     name: Apache 2.0
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
 servers:
-  - url: ""
+  - url: "http://localhost:6000/"
 paths:
   /create-account:
     post:
@@ -23,7 +23,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/User"
+              $ref: "#/components/schemas/CreateAccountRequest"
 
       responses:
         "201":
@@ -72,7 +72,7 @@ paths:
               type: object
               properties:
                 phoneNumber:
-                  type: string
+                  type: integer
                 password:
                   type: string
               required:
@@ -188,7 +188,7 @@ paths:
                   type: string
                   description: The message to be sent.
                 recipientPhoneNumber:
-                  type: string
+                  type: integer
                   description: The recipient's user ID.
               required:
                 - content
@@ -499,6 +499,19 @@ paths:
 
 components:
   schemas:
+    CreateAccountRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phoneNumber:
+          type: integer
+        password:
+          type: string
+      required:
+        - name
+        - phoneNumber
+        - password
     User:
       type: object
       properties:
@@ -507,13 +520,7 @@ components:
         name:
           type: string
         phoneNumber:
-          type: string
-        password:
-          type: string
-      required:
-        - name
-        - phoneNumber
-        - password
+          type: integer
 
     ChatMessage:
       type: object
