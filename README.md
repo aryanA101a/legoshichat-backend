@@ -8,10 +8,13 @@ Check out documentation [here](https://aryana101a.github.io/legoshichat-backend/
 
 ## Roadmap
 - [x] API Spec
-- [ ] API Implementation
+- [ ] API Implementation **WIP**
 - [ ] Unit Testing
 - [ ] CI
 - [ ] CD
+
+## Steps To Run(WIP)
+
 
 
 

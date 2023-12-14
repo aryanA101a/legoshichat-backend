@@ -11,11 +11,12 @@ import (
 func main() {
     app := gofr.New()
 
-    s := store.NewAuthStore(app.DB())
-	h := handler.New(s)
+    authStore := store.NewAuthStore(app.DB())
+	handler := handler.New(authStore)
 	
     
-    app.POST("/create-account", h.CreateAccount)
+    app.POST("/create-account", handler.HandleCreateAccount)
+    app.POST("/login", handler.HandleLogin)
     
     port,err:=strconv.Atoi(app.Config.Get("HTTP_PORT"))
     if err==nil{

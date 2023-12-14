@@ -5,12 +5,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type CreateAccountResponse struct {
+type AuthResponse struct {
 	User  User   `json:"user"`
 	Token string `json:"token"`
 }
 type CreateAccountRequest struct {
-	Name        string `json:"name" validate:"required"`
+	Name        string `json:"name" validate:"required,min=1"`
+	PhoneNumber uint64 `json:"phoneNumber" validate:"required,min=1000000000,max=9999999999"`
+	Password    string `json:"password" validate:"required,min=8"`
+}
+type LoginRequest struct {
 	PhoneNumber uint64 `json:"phoneNumber" validate:"required,min=1000000000,max=9999999999"`
 	Password    string `json:"password" validate:"required,min=8"`
 }
@@ -26,10 +30,8 @@ type User struct {
 	PhoneNumber uint64 `json:"phoneNumber"`
 }
 
-
-
 func NewAccount(name string, phoneNumber uint64, password string) (*Account, error) {
-	encpw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
@@ -38,6 +40,8 @@ func NewAccount(name string, phoneNumber uint64, password string) (*Account, err
 		ID:          uuid.New().String(),
 		Name:        name,
 		PhoneNumber: phoneNumber,
-		Password:    string(encpw),
+		Password:    string(hashedPassword),
 	}, nil
 }
+
+

@@ -69,15 +69,8 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                phoneNumber:
-                  type: integer
-                password:
-                  type: string
-              required:
-                - phoneNumber
-                - password
+              $ref: "#/components/schemas/LoginRequest"
+
       responses:
         "200":
           description: Successfully Authenticated
@@ -95,6 +88,14 @@ paths:
                   
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    $ref: "#/components/schemas/Error"
+        "400":
+          description: Bad Request - Invalid input or missing required fields
           content:
             application/json:
               schema:
@@ -504,14 +505,34 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
         phoneNumber:
           type: integer
+          minimum: 1000000000
+          maximum: 9999999999
+          example: 1234567890
         password:
           type: string
+          minLength: 8
       required:
         - name
         - phoneNumber
         - password
+    LoginRequest:
+      type: object
+      properties:
+        phoneNumber:
+          type: integer
+          minimum: 1000000000
+          maximum: 9999999999
+          example: 1234567890
+        password:
+          type: string
+          minLength: 8
+      required:
+        - phoneNumber
+        - password
+
     User:
       type: object
       properties:

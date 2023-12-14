@@ -4,17 +4,17 @@ import (
 	"gofr.dev/pkg/errors"
 )
 
-type ApiError struct {
+type Error struct {
 	Err struct {
 		Message string `json:"message"`
 	} `json:"error"`
 }
 
-func (ae ApiError) Error() string {
+func (ae Error) Error() string {
 	return ae.Err.Message
 }
-func NewApiError(message string) ApiError {
-	return ApiError{Err: struct {
+func NewError(message string) Error {
+	return Error{Err: struct {
 		Message string `json:"message"`
 	}{Message: message}}
 }
@@ -25,11 +25,13 @@ func HttpStatusError(statusCode int, message string) errors.Raw {
 	switch statusCode {
 	case 400:
 		statusMessage = "Bad Request"
+	case 401:
+		statusMessage = "Unauthorized"
 	case 500:
 		statusMessage = "Internal Server Error"
 	default:
 		statusMessage = "Unknown Status Code"
 	}
 
-	return errors.Raw{StatusCode: statusCode, Err: NewApiError(statusMessage + " - " + message)}
+	return errors.Raw{StatusCode: statusCode, Err: NewError(statusMessage + " - " + message)}
 }
