@@ -40,7 +40,7 @@ func (auth) CreateAccount(ctx *gofr.Context, accountRequest model.CreateAccountR
 
 func (auth) createAccountsTable(db *datastore.SQLClient) error {
 	query := "CREATE TABLE IF NOT EXISTS accounts" +
-		" (id uuid PRIMARY KEY , name varchar(100) , phoneNumber bigint , password varchar(100));"
+		" (id uuid PRIMARY KEY , name varchar(100) NOT NULL, phoneNumber bigint UNIQUE NOT NULL, password varchar(100) NOT NULL);"
 	_, err := db.Exec(query)
 	return err
 }
