@@ -1,13 +1,10 @@
 package store
 
 import (
-	"database/sql"
 
-	e "github.com/aryanA101a/legoshichat-backend/error"
 	"github.com/aryanA101a/legoshichat-backend/model"
 	"gofr.dev/pkg/datastore"
 	"gofr.dev/pkg/gofr"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type auth struct {
@@ -15,7 +12,7 @@ type auth struct {
 
 type AuthStore interface {
 	CreateAccount(ctx *gofr.Context, account model.Account) (*model.User, error)
-	Login(ctx *gofr.Context, loginRequest model.LoginRequest) (*model.User, error)
+	FetchAccount(ctx *gofr.Context, loginRequest model.LoginRequest) (*model.Account, error)
 }
 
 func NewAuthStore(db *datastore.SQLClient) AuthStore {
@@ -38,26 +35,16 @@ func (auth) CreateAccount(ctx *gofr.Context, account model.Account) (*model.User
 	return &model.User{ID: account.ID, Name: account.Name, PhoneNumber: account.PhoneNumber}, nil
 }
 
-func (auth) Login(ctx *gofr.Context, loginRequest model.LoginRequest) (*model.User, error) {
-	var user model.User
-	var passwordHash string
+func (auth) FetchAccount(ctx *gofr.Context, loginRequest model.LoginRequest) (*model.Account, error) {
+	var account model.Account
 
 	err := ctx.DB().QueryRowContext(ctx, " SELECT id,name,phoneNumber,password FROM accounts where phoneNumber=$1", loginRequest.PhoneNumber).
-		Scan(&user.ID, &user.Name, &user.PhoneNumber, &passwordHash)
-	if err != nil {
-		ctx.Logger.Info("err: ", err.Error())
-		if err == sql.ErrNoRows {
-			return nil,e.HttpStatusError(401,"User does not exists") 
-		}
-		return nil, e.HttpStatusError(500,"")
+		Scan(&account.ID, &account.Name, &account.PhoneNumber, &account.Password)
+	if err!=nil{
+		return nil,err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(loginRequest.Password))
-	if err != nil {
-		return nil, e.HttpStatusError(401,"Invalid password")
-	}
-
-	return &user, nil
+	return &account, nil
 
 }
 

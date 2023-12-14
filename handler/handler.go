@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"gofr.dev/pkg/gofr"
 	"gofr.dev/pkg/gofr/types"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type handler struct {
@@ -56,21 +58,29 @@ func (h handler) HandleLogin(ctx *gofr.Context) (interface{}, error) {
 	err = validator.New().Struct(loginRequest)
 	if err != nil {
 		ctx.Logger.Error(err)
-		return nil, e.HttpStatusError(400, "Invalid inputs or missing required fields -"+ err.Error())
+		return nil, e.HttpStatusError(400, "Invalid inputs or missing required fields -"+err.Error())
 	}
 
-	user, err := h.auth.Login(ctx, loginRequest)
+	account, err := h.auth.FetchAccount(ctx, loginRequest)
 	if err != nil {
-		ctx.Logger.Error(err)
-		return nil, err
+		ctx.Logger.Info("err: ", err.Error())
+		if err == sql.ErrNoRows {
+			return nil, e.HttpStatusError(401, "User does not exists")
+		}
+		return nil, e.HttpStatusError(500, "")
 	}
 
-	token, err := createJWT(ctx, user.ID)
+	err = bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(loginRequest.Password))
+	if err != nil {
+		return nil, e.HttpStatusError(401, "Invalid password")
+	}
+
+	token, err := createJWT(ctx, account.ID)
 	if err != nil {
 		ctx.Logger.Error(err)
 		return nil, e.HttpStatusError(500, "")
 	}
-	return types.Raw{Data: model.AuthResponse{User: *user, Token: token}}, nil
+	return types.Raw{Data: model.AuthResponse{User: model.User{ID: account.ID, Name: account.Name, PhoneNumber: account.PhoneNumber}, Token: token}}, nil
 }
 
 func createJWT(ctx *gofr.Context, userId string) (string, error) {
