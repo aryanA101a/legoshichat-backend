@@ -10,17 +10,30 @@ import (
 	"github.com/aryanA101a/legoshichat-backend/store"
 	"github.com/go-playground/validator"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"gofr.dev/pkg/gofr"
 	"gofr.dev/pkg/gofr/types"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type handler struct {
-	auth store.AuthStore
+type Creator interface {
+	NewAccount(name string, phoneNumber uint64, password string) (*model.Account, error)
+	NewJWT(ctx *gofr.Context, userId string) (string, error)
 }
 
-func New(a store.AuthStore) handler {
-	return handler{auth: a}
+type authCreator struct{}
+
+type handler struct {
+	auth        store.AuthStore
+	authCreator Creator
+}
+
+func New(a store.AuthStore,c Creator) handler {
+	return handler{auth: a, authCreator: c}
+}
+
+func NewCreator()authCreator{
+	return authCreator{}
 }
 
 func (h handler) HandleCreateAccount(ctx *gofr.Context) (interface{}, error) {
@@ -32,7 +45,7 @@ func (h handler) HandleCreateAccount(ctx *gofr.Context) (interface{}, error) {
 		return nil, e.HttpStatusError(400, "Invalid inputs or missing required fields"+err.Error())
 	}
 
-	newAccount, err := model.NewAccount(accountRequest.Name, accountRequest.PhoneNumber, accountRequest.Password)
+	newAccount, err := h.authCreator.NewAccount(accountRequest.Name, accountRequest.PhoneNumber, accountRequest.Password)
 	if err != nil {
 		return nil, e.HttpStatusError(500, "")
 	}
@@ -43,7 +56,7 @@ func (h handler) HandleCreateAccount(ctx *gofr.Context) (interface{}, error) {
 		return nil, e.HttpStatusError(500, err.Error())
 	}
 
-	token, err := createJWT(ctx, user.ID)
+	token, err := h.authCreator.NewJWT(ctx, user.ID)
 	if err != nil {
 		ctx.Logger.Error(err)
 		return nil, e.HttpStatusError(500, "")
@@ -75,7 +88,7 @@ func (h handler) HandleLogin(ctx *gofr.Context) (interface{}, error) {
 		return nil, e.HttpStatusError(401, "Invalid password")
 	}
 
-	token, err := createJWT(ctx, account.ID)
+	token, err := h.authCreator.NewJWT(ctx, account.ID)
 	if err != nil {
 		ctx.Logger.Error(err)
 		return nil, e.HttpStatusError(500, "")
@@ -83,7 +96,21 @@ func (h handler) HandleLogin(ctx *gofr.Context) (interface{}, error) {
 	return types.Raw{Data: model.AuthResponse{User: model.User{ID: account.ID, Name: account.Name, PhoneNumber: account.PhoneNumber}, Token: token}}, nil
 }
 
-func createJWT(ctx *gofr.Context, userId string) (string, error) {
+func (authCreator) NewAccount(name string, phoneNumber uint64, password string) (*model.Account, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Account{
+		ID:          uuid.New().String(),
+		Name:        name,
+		PhoneNumber: phoneNumber,
+		Password:    string(hashedPassword),
+	}, nil
+}
+
+func (authCreator) NewJWT(ctx *gofr.Context, userId string) (string, error) {
 	claims := &jwt.MapClaims{
 		"id":        userId,
 		"expiresAt": time.Now().Add(time.Duration(time.Duration.Hours(24) * 5)),

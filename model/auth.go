@@ -1,9 +1,6 @@
 package model
 
-import (
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
-)
+
 
 type AuthResponse struct {
 	User  User   `json:"user"`
@@ -30,18 +27,11 @@ type User struct {
 	PhoneNumber uint64 `json:"phoneNumber"`
 }
 
-func NewAccount(name string, phoneNumber uint64, password string) (*Account, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
 
-	return &Account{
-		ID:          uuid.New().String(),
-		Name:        name,
-		PhoneNumber: phoneNumber,
-		Password:    string(hashedPassword),
-	}, nil
-}
+
+
+
+
+
 
 

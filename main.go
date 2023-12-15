@@ -12,7 +12,8 @@ func main() {
     app := gofr.New()
 
     authStore := store.NewAuthStore(app.DB())
-	handler := handler.New(authStore)
+    authCreator:=handler.NewCreator()
+	handler := handler.New(authStore,authCreator)
 	
     
     app.POST("/create-account", handler.HandleCreateAccount)

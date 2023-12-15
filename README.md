@@ -13,8 +13,14 @@ Check out documentation [here](https://aryana101a.github.io/legoshichat-backend/
 - [ ] CI
 - [ ] CD
 
-## Steps To Run(WIP)
+## Steps To Run
 
+1. `docker run --name gofr-pgsql  -e POSTGRES_DB=legoshichat -e POSTGRES_USER=legoshiuser -e POSTGRES_PASSWORD=legoshipass -p 2006:5432 -d postgres:latest`
+
+2. `go run .`
+
+**To monitor database**
+`docker exec -it gofr-pgsql psql --username=legoshiuser --dbname=legoshichat`
 
 
 
