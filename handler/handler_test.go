@@ -31,7 +31,6 @@ func newMockAuthStore() store.AuthStore {
 	return mockAuthStore{}
 }
 
-
 func (mockAuthStore) CreateAccount(ctx *gofr.Context, account model.Account) (*model.User, error) {
 
 	return &model.User{ID: account.ID, Name: account.Name, PhoneNumber: account.PhoneNumber}, nil
@@ -43,13 +42,24 @@ func (mockAuthStore) FetchAccount(ctx *gofr.Context, loginRequest model.LoginReq
 	return &model.Account{Password: "$2a$10$hlaojbP2Ix5ZLFa64fPmgO3tyvH.jdBDVtq8veZyQMOWohcAndlpS"}, nil
 }
 
+func (mockAuthStore) AccountExists(ctx *gofr.Context, userId string) (bool, error) {
+	
+
+	return false, nil
+}
+
+func (mockAuthStore) GetUserIdByPhoneNumber(ctx *gofr.Context, phoneNumber uint64) (*string, error) {
+	
+	return nil, nil
+}
+
 func (createAccountTCmockAuthCreator) NewAccount(name string, phoneNumber uint64, password string) (*model.Account, error) {
-fmt.Println("t3mockAuthCreator called")
+	fmt.Println("t3mockAuthCreator called")
 	return nil, e.NewError("")
 }
 
 func (createAccountTCmockAuthCreator) NewJWT(ctx *gofr.Context, userId string) (string, error) {
-	return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHBpcmVzQXQiOiIyMDIzLTEyLTE0VDE1OjA5OjA1LjY2MzE5NjA1NiswNTozMCIsImlkIjoiY2E0MGZkMmItZjlhMi00NWQ5LWE2ZjctNDFjZGFiNWVjMDFlIn0.2Wp_KL-rM7RMQmWCCLvtHrG5M-zVuGFO-7PBLzDAbJ4",nil
+	return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHBpcmVzQXQiOiIyMDIzLTEyLTE0VDE1OjA5OjA1LjY2MzE5NjA1NiswNTozMCIsImlkIjoiY2E0MGZkMmItZjlhMi00NWQ5LWE2ZjctNDFjZGFiNWVjMDFlIn0.2Wp_KL-rM7RMQmWCCLvtHrG5M-zVuGFO-7PBLzDAbJ4", nil
 }
 
 func (jwtErrorTCmockAuthCreator) NewAccount(name string, phoneNumber uint64, password string) (*model.Account, error) {
@@ -82,7 +92,7 @@ func TestHandleCreateAccount(t *testing.T) {
 	invalidRequestBodyTC := testCase{
 		desc: "invalid request body",
 		body: []byte(`invalidjson`),
-		err: e.NewError(""),
+		err:  e.NewError(""),
 	}
 
 	createAccountErrorTC := testCase{
@@ -97,15 +107,14 @@ func TestHandleCreateAccount(t *testing.T) {
 		err:  e.NewError(""),
 	}
 
-	runTest(t, successfulTC, app, New(newMockAuthStore(), NewCreator()))
-	runTest(t, invalidRequestBodyTC, app, New(newMockAuthStore(), NewCreator()))
-	runTest(t, createAccountErrorTC, app, New(newMockAuthStore(), createAccountTCmockAuthCreator{}))
-	runTest(t, jwtErrorTC, app, New(newMockAuthStore(), jwtErrorTCmockAuthCreator{}))
-
+	runTest(t, successfulTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: NewCreator()})
+	runTest(t, invalidRequestBodyTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: NewCreator()})
+	runTest(t, createAccountErrorTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: createAccountTCmockAuthCreator{}})
+	runTest(t, jwtErrorTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: jwtErrorTCmockAuthCreator{}})
 
 }
 
-func runTest(t *testing.T, tc testCase, app *gofr.Gofr, h handler) {
+func runTest(t *testing.T, tc testCase, app *gofr.Gofr, h Handler) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "http://dummy", bytes.NewReader(tc.body))
 
@@ -115,7 +124,7 @@ func runTest(t *testing.T, tc testCase, app *gofr.Gofr, h handler) {
 
 	result, err := h.HandleCreateAccount(ctx)
 
-	fmt.Println("errr", tc.expected,err)
+	fmt.Println("errr", tc.expected, err)
 
 	if tc.err != nil {
 		assert.Error(t, err, "TEST: %s: unexpected error", tc.desc)
@@ -125,7 +134,6 @@ func runTest(t *testing.T, tc testCase, app *gofr.Gofr, h handler) {
 
 	assert.IsType(t, tc.expected, result, "TEST: %s: unexpected result type", tc.desc)
 }
-
 
 type fetchAccountErrorTcmockAuthStore struct{}
 
@@ -140,6 +148,17 @@ func (fetchAccountErrorTcmockAuthStore) FetchAccount(ctx *gofr.Context, loginReq
 	return nil, e.NewError("")
 }
 
+func (fetchAccountErrorTcmockAuthStore) AccountExists(ctx *gofr.Context, userId string) (bool, error) {
+	
+
+	return false, nil
+}
+
+func (fetchAccountErrorTcmockAuthStore) GetUserIdByPhoneNumber(ctx *gofr.Context, phoneNumber uint64) (*string, error) {
+	
+	return nil, nil
+}
+
 type userNotExistsTCmockAuthStore struct{}
 
 func (userNotExistsTCmockAuthStore) CreateAccount(ctx *gofr.Context, account model.Account) (*model.User, error) {
@@ -151,6 +170,17 @@ func (userNotExistsTCmockAuthStore) CreateAccount(ctx *gofr.Context, account mod
 func (userNotExistsTCmockAuthStore) FetchAccount(ctx *gofr.Context, loginRequest model.LoginRequest) (*model.Account, error) {
 
 	return nil, sql.ErrNoRows
+}
+
+func (userNotExistsTCmockAuthStore) AccountExists(ctx *gofr.Context, userId string) (bool, error) {
+	
+
+	return false, nil
+}
+
+func (userNotExistsTCmockAuthStore) GetUserIdByPhoneNumber(ctx *gofr.Context, phoneNumber uint64) (*string, error) {
+	
+	return nil, nil
 }
 func TestHandleLogin(t *testing.T) {
 	app := gofr.New()
@@ -199,16 +229,15 @@ func TestHandleLogin(t *testing.T) {
 
 	// Add more test cases as needed
 
-	runLoginTest(t, successfulLoginTC, app, New(newMockAuthStore(), NewCreator(), ))
-	runLoginTest(t, invalidRequestBodyTC, app, New(newMockAuthStore(), NewCreator()))
-	runLoginTest(t, fetchAccountErrorTC, app, New(fetchAccountErrorTcmockAuthStore{}, NewCreator(), ))
-	runLoginTest(t, userNotExistsTC, app, New(userNotExistsTCmockAuthStore{}, NewCreator(),))
-	runLoginTest(t, invalidPasswordTC, app, New(newMockAuthStore(), NewCreator(),))
-	runLoginTest(t, jwtErrorTC, app, New(newMockAuthStore(), jwtErrorTCmockAuthCreator{},))
+	runLoginTest(t, successfulLoginTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: NewCreator()})
+	runLoginTest(t, invalidRequestBodyTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: NewCreator()})
+	runLoginTest(t, fetchAccountErrorTC, app, Handler{Auth: fetchAccountErrorTcmockAuthStore{}, AuthCreator: NewCreator()})
+	runLoginTest(t, userNotExistsTC, app, Handler{Auth: userNotExistsTCmockAuthStore{}, AuthCreator: NewCreator()})
+	runLoginTest(t, invalidPasswordTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: NewCreator()})
+	runLoginTest(t, jwtErrorTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: jwtErrorTCmockAuthCreator{}})
 }
 
-
-func runLoginTest(t *testing.T, tc testCase, app *gofr.Gofr, h handler) {
+func runLoginTest(t *testing.T, tc testCase, app *gofr.Gofr, h Handler) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "http://dummy", bytes.NewReader(tc.body))
 
