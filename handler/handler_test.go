@@ -225,7 +225,6 @@ func TestHandleLogin(t *testing.T) {
 		err:  e.NewError(""),
 	}
 
-
 	runLoginTest(t, successfulLoginTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: NewCreator()})
 	runLoginTest(t, invalidRequestBodyTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: NewCreator()})
 	runLoginTest(t, fetchAccountErrorTC, app, Handler{Auth: fetchAccountErrorTcmockAuthStore{}, AuthCreator: NewCreator()})
@@ -299,6 +298,16 @@ func (addMessageErrorTCMessageStore) GetMessages(ctx *gofr.Context, senderId, re
 	return nil, nil
 }
 
+type mockFriendStore struct{}
+
+func (f mockFriendStore) AddFriend(ctx *gofr.Context, senderId, recieverId string) error {
+	return nil
+}
+
+func (f mockFriendStore) GetFriends(ctx *gofr.Context, userId string) (*[]model.User, error) {
+	return nil, nil
+}
+
 func TestHandleSendMessageByID(t *testing.T) {
 	app := gofr.New()
 
@@ -323,10 +332,9 @@ func TestHandleSendMessageByID(t *testing.T) {
 		err:    e.HttpStatusError(500, "message store error"),
 	}
 
-
-	runSendMessageTest(t, validInputTC, app, Handler{Message: successfulTCMessageStore{}})
-	runSendMessageTest(t, invalidInputTC, app, Handler{Message: successfulTCMessageStore{}})
-	runSendMessageTest(t, messageStoreErrorTC, app, Handler{Message: addMessageErrorTCMessageStore{}})
+	runSendMessageTest(t, validInputTC, app, Handler{Message: successfulTCMessageStore{}, Friend: mockFriendStore{}})
+	runSendMessageTest(t, invalidInputTC, app, Handler{Message: successfulTCMessageStore{}, Friend: mockFriendStore{}})
+	runSendMessageTest(t, messageStoreErrorTC, app, Handler{Message: addMessageErrorTCMessageStore{}, Friend: mockFriendStore{}})
 }
 
 type testCaseSendMessage struct {

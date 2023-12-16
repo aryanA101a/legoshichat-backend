@@ -47,12 +47,12 @@ func (authCreator) NewJWT(ctx *gofr.Context, userId string) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
-func NewMessage(from, to, content string) model.Message {
+func NewMessage(senderId, recipientId, content string) model.Message {
 
 	return model.Message{
 		ID:      uuid.New().String(),
-		From:    from,
-		To:      to,
+		From:    senderId,
+		To:      recipientId,
 		Content: content,
 		Timestamp: time.Now(),
 	}

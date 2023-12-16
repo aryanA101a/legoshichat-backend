@@ -3,13 +3,17 @@
 
 Welcome to the legoshichat API, the official interface for the legoshichat. Unlock seamless integration and access the unique features of legoshichat through this official API.
 
+This API employs JSON Web Tokens (JWT) for authentication. Please note that all endpoints, with the exception of the login and create account functionalities, necessitate the inclusion of an authorized JWT bearer token for access.
+
 ## Documentation
 Check out documentation [here](https://aryana101a.github.io/legoshichat-backend/).
 
+Also checkout the **postman collection** in the [docs](https://github.com/aryanA101a/legoshichat-backend/tree/main/docs) folder.
+
 ## Roadmap
 - [x] API Spec
-- [ ] API Implementation **WIP**
-- [ ] Unit Testing
+- [x] API Implementation
+- [ ] Unit Testing **30%**
 - [ ] CI
 - [ ] CD
 
@@ -23,4 +27,5 @@ Check out documentation [here](https://aryana101a.github.io/legoshichat-backend/
 `docker exec -it gofr-pgsql psql --username=legoshiuser --dbname=legoshichat`
 
 
+**Note:** In the context of this project, the .env file is intentionally exposed publicly; however, it is crucial to emphasize that this practice is strongly discouraged in a production environment
 

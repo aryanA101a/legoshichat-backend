@@ -20,11 +20,12 @@ import (
 type Handler struct {
 	Auth        store.AuthStore
 	Message     store.MessageStore
+	Friend      store.FriendStore
 	AuthCreator Creator
 }
 
-func New(a store.AuthStore, m store.MessageStore, c Creator) Handler {
-	return Handler{Auth: a, Message: m, AuthCreator: c}
+func New(a store.AuthStore, m store.MessageStore, f store.FriendStore, c Creator) Handler {
+	return Handler{Auth: a, Message: m, Friend: f, AuthCreator: c}
 }
 
 func (h Handler) HandleCreateAccount(ctx *gofr.Context) (interface{}, error) {
@@ -99,6 +100,8 @@ func (h Handler) HandleSendMessageByID(ctx *gofr.Context) (interface{}, error) {
 
 	message := NewMessage(ctx.Value("userId").(string), messageRequest.RecipientID, messageRequest.Content)
 
+	h.Friend.AddFriend(ctx, ctx.Value("userId").(string), messageRequest.RecipientID)
+
 	err = h.Message.AddMessage(ctx, message)
 	if err != nil {
 		ctx.Logger.Error(err)
@@ -117,6 +120,7 @@ func (h Handler) HandleSendMessageByPhoneNumber(ctx *gofr.Context) (interface{},
 		ctx.Logger.Error(err)
 		return nil, e.HttpStatusError(400, "Invalid inputs or missing required fields -"+err.Error())
 	}
+
 	recipientId, err := h.Auth.GetUserIdByPhoneNumber(ctx, messageRequest.RecipientPhoneNumber)
 	if err != nil {
 		ctx.Logger.Info("err: ", err.Error())
@@ -125,7 +129,10 @@ func (h Handler) HandleSendMessageByPhoneNumber(ctx *gofr.Context) (interface{},
 		}
 		return nil, e.HttpStatusError(500, "")
 	}
+
 	message := NewMessage(ctx.Value("userId").(string), *recipientId, messageRequest.Content)
+
+	h.Friend.AddFriend(ctx, ctx.Value("userId").(string), *recipientId)
 
 	err = h.Message.AddMessage(ctx, message)
 	if err != nil {
@@ -233,6 +240,18 @@ func (h Handler) HandleGetMessages(ctx *gofr.Context) (interface{}, error) {
 	}
 	return types.Raw{Data: model.GetMessagesResponse{Page: getMessageRequest.Page, LastPage: lastPage, Messages: *messages}}, nil
 
+}
+
+func (h Handler) GetFriends(ctx *gofr.Context) (interface{}, error) {
+	friends, err := h.Friend.GetFriends(ctx, ctx.Value("userId").(string))
+	if err != nil {
+		ctx.Logger.Info("err: ", err.Error())
+		if err == sql.ErrNoRows {
+			return nil, e.HttpStatusError(404, "No Friends")
+		}
+		return nil, e.HttpStatusError(500, "")
+	}
+	return types.Raw{Data: friends}, nil
 }
 
 func WithJWTAuth(handlerFunc gofr.Handler, authStore store.AuthStore) gofr.Handler {
