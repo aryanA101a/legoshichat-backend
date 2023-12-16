@@ -23,7 +23,7 @@ func NewAuthStore(db *datastore.SQLClient) AuthStore {
 }
 
 func (a auth) init(db *datastore.SQLClient) {
-	a.createAccountsTable(db)
+	createAccountsTable(db)
 }
 
 func (auth) CreateAccount(ctx *gofr.Context, account model.Account) (*model.User, error) {
@@ -73,7 +73,7 @@ func (a auth) GetUserIdByPhoneNumber(ctx *gofr.Context, phoneNumber uint64) (*st
 	return &id, nil
 }
 
-func (auth) createAccountsTable(db *datastore.SQLClient) error {
+func  createAccountsTable(db *datastore.SQLClient) error {
 	query := "CREATE TABLE IF NOT EXISTS accounts" +
 		" (id uuid PRIMARY KEY , name varchar(100) NOT NULL, phoneNumber bigint UNIQUE NOT NULL, password varchar(100) NOT NULL);"
 	_, err := db.Exec(query)

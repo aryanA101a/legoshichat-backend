@@ -225,7 +225,6 @@ func TestHandleLogin(t *testing.T) {
 		err:  e.NewError(""),
 	}
 
-	// Add more test cases as needed
 
 	runLoginTest(t, successfulLoginTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: NewCreator()})
 	runLoginTest(t, invalidRequestBodyTC, app, Handler{Auth: newMockAuthStore(), AuthCreator: NewCreator()})
@@ -270,6 +269,14 @@ func (successfulTCMessageStore) UpdateMessage(ctx *gofr.Context, userId, message
 	return nil, nil
 }
 
+func (successfulTCMessageStore) DeleteMessage(ctx *gofr.Context, userId, messageId string) error {
+	return nil
+}
+
+func (successfulTCMessageStore) GetMessages(ctx *gofr.Context, senderId, recieverId string, page, limit uint) (*[]model.Message, error) {
+	return nil, nil
+}
+
 type addMessageErrorTCMessageStore struct{}
 
 func (addMessageErrorTCMessageStore) AddMessage(ctx *gofr.Context, message model.Message) error {
@@ -281,6 +288,14 @@ func (addMessageErrorTCMessageStore) GetMessage(ctx *gofr.Context, userId, messa
 }
 
 func (addMessageErrorTCMessageStore) UpdateMessage(ctx *gofr.Context, userId, messageId, updatedContent string) (*model.Message, error) {
+	return nil, nil
+}
+
+func (addMessageErrorTCMessageStore) DeleteMessage(ctx *gofr.Context, userId, messageId string) error {
+	return nil
+}
+
+func (addMessageErrorTCMessageStore) GetMessages(ctx *gofr.Context, senderId, recieverId string, page, limit uint) (*[]model.Message, error) {
 	return nil, nil
 }
 
@@ -308,7 +323,6 @@ func TestHandleSendMessageByID(t *testing.T) {
 		err:    e.HttpStatusError(500, "message store error"),
 	}
 
-	// Add more test cases as needed
 
 	runSendMessageTest(t, validInputTC, app, Handler{Message: successfulTCMessageStore{}})
 	runSendMessageTest(t, invalidInputTC, app, Handler{Message: successfulTCMessageStore{}})
