@@ -117,11 +117,11 @@ func (h Handler) HandleSendMessageByPhoneNumber(ctx *gofr.Context) (interface{},
 		ctx.Logger.Error(err)
 		return nil, e.HttpStatusError(400, "Invalid inputs or missing required fields -"+err.Error())
 	}
-	recipientId,err:=h.Auth.GetUserIdByPhoneNumber(ctx,messageRequest.RecipientPhoneNumber)
+	recipientId, err := h.Auth.GetUserIdByPhoneNumber(ctx, messageRequest.RecipientPhoneNumber)
 	if err != nil {
 		ctx.Logger.Info("err: ", err.Error())
 		if err == sql.ErrNoRows {
-			return nil, e.HttpStatusError(401, "Recipient does not exists")
+			return nil, e.HttpStatusError(404, "Recipient does not exists")
 		}
 		return nil, e.HttpStatusError(500, "")
 	}
@@ -136,9 +136,107 @@ func (h Handler) HandleSendMessageByPhoneNumber(ctx *gofr.Context) (interface{},
 	return types.Raw{Data: message}, nil
 }
 
+func (h Handler) HandleGetMessage(ctx *gofr.Context) (interface{}, error) {
+	messageId := ctx.PathParam("id")
+	if strings.TrimSpace(messageId) == "" {
+		return nil, e.HttpStatusError(400, "Missing Parameter messageId")
+	}
+
+	message, err := h.Message.GetMessage(ctx, ctx.Value("userId").(string), messageId)
+	if err != nil {
+		ctx.Logger.Info("err: ", err.Error())
+		if err == sql.ErrNoRows {
+			return nil, e.HttpStatusError(404, "Message does not exists")
+		} else if err == e.NewError("You are not authorized to see that message") {
+			return nil, e.HttpStatusError(403, err.Error())
+		}
+		return nil, e.HttpStatusError(500, "")
+	}
+	return types.Raw{Data: message}, nil
+}
+
+func (h Handler) HandlePutMessage(ctx *gofr.Context) (interface{}, error) {
+	var updateMessageRequest model.UpdateMessageRequest
+	err := json.NewDecoder(ctx.Request().Body).Decode(&updateMessageRequest)
+	err = validator.New().Struct(updateMessageRequest)
+	if err != nil {
+		ctx.Logger.Error(err)
+		return nil, e.HttpStatusError(400, "Invalid inputs or missing required fields -"+err.Error())
+	}
+
+	messageId := ctx.PathParam("id")
+	if strings.TrimSpace(messageId) == "" {
+		return nil, e.HttpStatusError(400, "Missing Parameter messageId")
+	}
+
+	message, err := h.Message.UpdateMessage(ctx, ctx.Value("userId").(string), messageId, updateMessageRequest.Content)
+	if err != nil {
+		ctx.Logger.Info("err: ", err.Error())
+		if err == sql.ErrNoRows {
+			return nil, e.HttpStatusError(404, "Message does not exists")
+		} else if err == e.NewError("You are not authorized to update that message") {
+			return nil, e.HttpStatusError(403, err.Error())
+		}
+		return nil, e.HttpStatusError(500, "")
+	}
+	return types.Raw{Data: message}, nil
+}
+
+func (h Handler) HandleDeleteMessage(ctx *gofr.Context) (interface{}, error) {
+	messageId := ctx.PathParam("id")
+	if strings.TrimSpace(messageId) == "" {
+		return nil, e.HttpStatusError(400, "Missing Parameter messageId")
+	}
+
+	err := h.Message.DeleteMessage(ctx, ctx.Value("userId").(string), messageId)
+	if err != nil {
+		ctx.Logger.Info("err: ", err.Error())
+		if err == sql.ErrNoRows {
+			return nil, e.HttpStatusError(404, "Message does not exists")
+		} else if err == e.NewError("You are not authorized to delete that message") {
+			return nil, e.HttpStatusError(403, err.Error())
+		}
+		return nil, e.HttpStatusError(500, "")
+	}
+	return nil, nil
+}
+
+func (h Handler) HandleGetMessages(ctx *gofr.Context) (interface{}, error) {
+	var getMessageRequest model.GetMessagesRequest
+	err := json.NewDecoder(ctx.Request().Body).Decode(&getMessageRequest)
+	err = validator.New().Struct(getMessageRequest)
+	if err != nil {
+		ctx.Logger.Error(err)
+		return nil, e.HttpStatusError(400, "Invalid inputs or missing required fields -"+err.Error())
+	}
+
+	if userId := ctx.Value("userId").(string); !(userId == getMessageRequest.SenderID || userId == getMessageRequest.RecipientID) {
+		return nil, e.HttpStatusError(403, "You are not authorized to retrieve these messages")
+	}
+
+	messages, err := h.Message.GetMessages(ctx, getMessageRequest.SenderID, getMessageRequest.RecipientID, getMessageRequest.Page, model.RequestMessageLimit)
+	if err != nil {
+		ctx.Logger.Info("err: ", err.Error())
+		if err == sql.ErrNoRows {
+			return nil, e.HttpStatusError(404, "No messages found for this page")
+		}
+		return nil, e.HttpStatusError(500, "")
+	}
+
+	if len(*messages) == 0 {
+		return nil, e.HttpStatusError(404, "Page does not exists")
+	}
+
+	lastPage := false
+	if len(*messages) < model.RequestMessageLimit {
+		lastPage = true
+	}
+	return types.Raw{Data: model.GetMessagesResponse{Page: getMessageRequest.Page, LastPage: lastPage, Messages: *messages}}, nil
+
+}
+
 func WithJWTAuth(handlerFunc gofr.Handler, authStore store.AuthStore) gofr.Handler {
 	return func(ctx *gofr.Context) (interface{}, error) {
-		fmt.Println("calling JWT auth middleware")
 
 		tokenString, err := extractToken(ctx)
 		if err != nil {

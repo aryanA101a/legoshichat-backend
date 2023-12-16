@@ -34,7 +34,7 @@
                                     ],
                                     "body": {
                                         "mode": "raw",
-                                        "raw": "{\n \"name\": \"<string>\",\n \"phoneNumber\": \"<string>\",\n \"password\": \"<string>\"\n}",
+                                        "raw": "{\n \"name\": \"<string>\",\n \"phoneNumber\": \"<number>\",\n \"password\": \"<string>\"\n}",
                                         "options": {
                                             "raw": {
                                                 "language": "json"
@@ -81,7 +81,7 @@
                                     ],
                                     "body": {
                                         "mode": "raw",
-                                        "raw": "{\n \"phoneNumber\": \"<string>\",\n \"password\": \"<string>\"\n}",
+                                        "raw": "{\n \"phoneNumber\": \"<number>\",\n \"password\": \"<string>\"\n}",
                                         "options": {
                                             "raw": {
                                                 "language": "json"
@@ -330,7 +330,7 @@
                                     ],
                                     "body": {
                                         "mode": "raw",
-                                        "raw": "{\n \"content\": \"<string>\",\n \"recipientPhoneNumber\": \"<string>\"\n}",
+                                        "raw": "{\n \"content\": \"<string>\",\n \"recipientPhoneNumber\": \"<number>\"\n}",
                                         "options": {
                                             "raw": {
                                                 "language": "json"
@@ -378,7 +378,7 @@
                                     ],
                                     "body": {
                                         "mode": "raw",
-                                        "raw": "{\n \"recipientId\": \"<string>\"\n}",
+                                        "raw": "{\n \"page\": \"<number>\",\n \"senderId\": \"<string>\",\n \"recipientId\": \"<string>\"\n}",
                                         "options": {
                                             "raw": {
                                                 "language": "json"

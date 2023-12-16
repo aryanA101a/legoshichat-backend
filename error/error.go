@@ -27,6 +27,10 @@ func HttpStatusError(statusCode int, message string) errors.Raw {
 		statusMessage = "Bad Request"
 	case 401:
 		statusMessage = "Unauthorized"
+	case 403:
+		statusMessage = "Forbidden"
+	case 404:
+		statusMessage = "Not Found"
 	case 500:
 		statusMessage = "Internal Server Error"
 	default:

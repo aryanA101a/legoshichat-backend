@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -43,13 +44,12 @@ func (mockAuthStore) FetchAccount(ctx *gofr.Context, loginRequest model.LoginReq
 }
 
 func (mockAuthStore) AccountExists(ctx *gofr.Context, userId string) (bool, error) {
-	
 
 	return false, nil
 }
 
 func (mockAuthStore) GetUserIdByPhoneNumber(ctx *gofr.Context, phoneNumber uint64) (*string, error) {
-	
+
 	return nil, nil
 }
 
@@ -149,13 +149,12 @@ func (fetchAccountErrorTcmockAuthStore) FetchAccount(ctx *gofr.Context, loginReq
 }
 
 func (fetchAccountErrorTcmockAuthStore) AccountExists(ctx *gofr.Context, userId string) (bool, error) {
-	
 
 	return false, nil
 }
 
 func (fetchAccountErrorTcmockAuthStore) GetUserIdByPhoneNumber(ctx *gofr.Context, phoneNumber uint64) (*string, error) {
-	
+
 	return nil, nil
 }
 
@@ -173,13 +172,12 @@ func (userNotExistsTCmockAuthStore) FetchAccount(ctx *gofr.Context, loginRequest
 }
 
 func (userNotExistsTCmockAuthStore) AccountExists(ctx *gofr.Context, userId string) (bool, error) {
-	
 
 	return false, nil
 }
 
 func (userNotExistsTCmockAuthStore) GetUserIdByPhoneNumber(ctx *gofr.Context, phoneNumber uint64) (*string, error) {
-	
+
 	return nil, nil
 }
 func TestHandleLogin(t *testing.T) {
@@ -256,4 +254,90 @@ func runLoginTest(t *testing.T, tc testCase, app *gofr.Gofr, h Handler) {
 	}
 
 	assert.IsType(t, tc.expected, result, "TEST: %s: unexpected result type", tc.desc)
+}
+
+type successfulTCMessageStore struct{}
+
+func (successfulTCMessageStore) AddMessage(ctx *gofr.Context, message model.Message) error {
+	return nil
+}
+
+func (successfulTCMessageStore) GetMessage(ctx *gofr.Context, userId, messageId string) (*model.Message, error) {
+	return nil, nil
+}
+
+func (successfulTCMessageStore) UpdateMessage(ctx *gofr.Context, userId, messageId, updatedContent string) (*model.Message, error) {
+	return nil, nil
+}
+
+type addMessageErrorTCMessageStore struct{}
+
+func (addMessageErrorTCMessageStore) AddMessage(ctx *gofr.Context, message model.Message) error {
+	return e.NewError("")
+}
+
+func (addMessageErrorTCMessageStore) GetMessage(ctx *gofr.Context, userId, messageId string) (*model.Message, error) {
+	return nil, nil
+}
+
+func (addMessageErrorTCMessageStore) UpdateMessage(ctx *gofr.Context, userId, messageId, updatedContent string) (*model.Message, error) {
+	return nil, nil
+}
+
+func TestHandleSendMessageByID(t *testing.T) {
+	app := gofr.New()
+
+	validInputTC := testCaseSendMessage{
+		desc:     "send message by ID success",
+		body:     []byte(`{"recipientID":"123","content":"Hello, World!"}`),
+		userID:   "testUserID",
+		expected: types.Raw{},
+		err:      nil,
+	}
+
+	invalidInputTC := testCaseSendMessage{
+		desc: "invalid input",
+		body: []byte(`invalidjson`),
+		err:  e.HttpStatusError(400, "Invalid inputs or missing required fields"),
+	}
+
+	messageStoreErrorTC := testCaseSendMessage{
+		desc:   "message store error",
+		body:   []byte(`{"recipientID":"123","content":"Hello, World!"}`),
+		userID: "testUserID",
+		err:    e.HttpStatusError(500, "message store error"),
+	}
+
+	// Add more test cases as needed
+
+	runSendMessageTest(t, validInputTC, app, Handler{Message: successfulTCMessageStore{}})
+	runSendMessageTest(t, invalidInputTC, app, Handler{Message: successfulTCMessageStore{}})
+	runSendMessageTest(t, messageStoreErrorTC, app, Handler{Message: addMessageErrorTCMessageStore{}})
+}
+
+type testCaseSendMessage struct {
+	desc     string
+	body     []byte
+	userID   string
+	expected interface{}
+	err      error
+}
+
+func runSendMessageTest(t *testing.T, tc testCaseSendMessage, app *gofr.Gofr, h Handler) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "http://dummy", bytes.NewReader(tc.body))
+
+	req := request.NewHTTPRequest(r)
+	res := responder.NewContextualResponder(w, r)
+	ctx := gofr.NewContext(res, req, app)
+	*&ctx.Context = context.WithValue(context.Background(), "userId", "someUserId")
+
+	result, err := h.HandleSendMessageByID(ctx)
+
+	if tc.err != nil {
+		assert.Error(t, err, "TEST: %s: unexpected error", tc.desc)
+	} else {
+		assert.NoError(t, err, "TEST: Unexpected Error: %s", tc.desc)
+		assert.IsType(t, tc.expected, result, "TEST: %s: unexpected result type", tc.desc)
+	}
 }

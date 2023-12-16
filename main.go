@@ -18,8 +18,13 @@ func main() {
 
 	app.POST("/create-account", h.HandleCreateAccount)
 	app.POST("/login", h.HandleLogin)
-	app.POST("/message/sendById",handler.WithJWTAuth(h.HandleSendMessageByID,authStore))
-	app.POST("/message/sendByPhoneNumber",handler.WithJWTAuth(h.HandleSendMessageByPhoneNumber,authStore))
+    
+	app.GET("/message/{id}", handler.WithJWTAuth(h.HandleGetMessage, authStore))
+	app.PUT("/message/{id}", handler.WithJWTAuth(h.HandlePutMessage, authStore))
+	app.DELETE("/message/{id}", handler.WithJWTAuth(h.HandleDeleteMessage, authStore))
+	app.POST("/message/sendById", handler.WithJWTAuth(h.HandleSendMessageByID, authStore))
+	app.POST("/message/sendByPhoneNumber", handler.WithJWTAuth(h.HandleSendMessageByPhoneNumber, authStore))
+	app.POST("/messages", handler.WithJWTAuth(h.HandleGetMessages, authStore))
 
 	port, err := strconv.Atoi(app.Config.Get("HTTP_PORT"))
 	if err == nil {
