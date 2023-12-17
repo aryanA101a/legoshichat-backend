@@ -49,8 +49,8 @@ func (mockAuthStore) AccountExists(ctx *gofr.Context, userId string) (bool, erro
 }
 
 func (mockAuthStore) GetUserIdByPhoneNumber(ctx *gofr.Context, phoneNumber uint64) (*string, error) {
-
-	return nil, nil
+var r string=""
+	return &r, nil
 }
 
 func (createAccountTCmockAuthCreator) NewAccount(name string, phoneNumber uint64, password string) (*model.Account, error) {
@@ -178,7 +178,7 @@ func (userNotExistsTCmockAuthStore) AccountExists(ctx *gofr.Context, userId stri
 
 func (userNotExistsTCmockAuthStore) GetUserIdByPhoneNumber(ctx *gofr.Context, phoneNumber uint64) (*string, error) {
 
-	return nil, nil
+	return nil, sql.ErrNoRows
 }
 func TestHandleLogin(t *testing.T) {
 	app := gofr.New()
@@ -265,7 +265,7 @@ func (successfulTCMessageStore) GetMessage(ctx *gofr.Context, userId, messageId 
 }
 
 func (successfulTCMessageStore) UpdateMessage(ctx *gofr.Context, userId, messageId, updatedContent string) (*model.Message, error) {
-	return nil, nil
+	return &model.Message{}, nil
 }
 
 func (successfulTCMessageStore) DeleteMessage(ctx *gofr.Context, userId, messageId string) error {
@@ -276,25 +276,69 @@ func (successfulTCMessageStore) GetMessages(ctx *gofr.Context, senderId, recieve
 	return nil, nil
 }
 
-type addMessageErrorTCMessageStore struct{}
+type errorTCMessageStore struct{}
 
-func (addMessageErrorTCMessageStore) AddMessage(ctx *gofr.Context, message model.Message) error {
+func (errorTCMessageStore) AddMessage(ctx *gofr.Context, message model.Message) error {
 	return e.NewError("")
 }
 
-func (addMessageErrorTCMessageStore) GetMessage(ctx *gofr.Context, userId, messageId string) (*model.Message, error) {
+func (errorTCMessageStore) GetMessage(ctx *gofr.Context, userId, messageId string) (*model.Message, error) {
+	return nil, sql.ErrNoRows
+}
+
+func (errorTCMessageStore) UpdateMessage(ctx *gofr.Context, userId, messageId, updatedContent string) (*model.Message, error) {
+	return nil, sql.ErrNoRows
+}
+
+func (errorTCMessageStore) DeleteMessage(ctx *gofr.Context, userId, messageId string) error {
+	return sql.ErrNoRows
+}
+
+func (errorTCMessageStore) GetMessages(ctx *gofr.Context, senderId, recieverId string, page, limit uint) (*[]model.Message, error) {
 	return nil, nil
 }
 
-func (addMessageErrorTCMessageStore) UpdateMessage(ctx *gofr.Context, userId, messageId, updatedContent string) (*model.Message, error) {
+type messageStoreErrorTCMessageStore struct{}
+
+func (messageStoreErrorTCMessageStore) AddMessage(ctx *gofr.Context, message model.Message) error {
+	return e.NewError("")
+}
+
+func (messageStoreErrorTCMessageStore) GetMessage(ctx *gofr.Context, userId, messageId string) (*model.Message, error) {
+	return nil, e.NewError("")
+}
+
+func (messageStoreErrorTCMessageStore) UpdateMessage(ctx *gofr.Context, userId, messageId, updatedContent string) (*model.Message, error) {
+	return nil, e.NewError("")
+}
+
+func (messageStoreErrorTCMessageStore) DeleteMessage(ctx *gofr.Context, userId, messageId string) error {
+	return e.NewError("")
+}
+
+func (messageStoreErrorTCMessageStore) GetMessages(ctx *gofr.Context, senderId, recieverId string, page, limit uint) (*[]model.Message, error) {
 	return nil, nil
 }
 
-func (addMessageErrorTCMessageStore) DeleteMessage(ctx *gofr.Context, userId, messageId string) error {
-	return nil
+type authorizationErrorTCMessageStore struct{}
+
+func (authorizationErrorTCMessageStore) AddMessage(ctx *gofr.Context, message model.Message) error {
+	return e.NewError("")
 }
 
-func (addMessageErrorTCMessageStore) GetMessages(ctx *gofr.Context, senderId, recieverId string, page, limit uint) (*[]model.Message, error) {
+func (authorizationErrorTCMessageStore) GetMessage(ctx *gofr.Context, userId, messageId string) (*model.Message, error) {
+	return nil, e.NewError("You are not authorized to see that message")
+}
+
+func (authorizationErrorTCMessageStore) UpdateMessage(ctx *gofr.Context, userId, messageId, updatedContent string) (*model.Message, error) {
+	return nil, e.NewError("You are not authorized to see that message")
+}
+
+func (authorizationErrorTCMessageStore) DeleteMessage(ctx *gofr.Context, userId, messageId string) error {
+	return e.NewError("You are not authorized to see that message")
+}
+
+func (authorizationErrorTCMessageStore) GetMessages(ctx *gofr.Context, senderId, recieverId string, page, limit uint) (*[]model.Message, error) {
 	return nil, nil
 }
 
@@ -334,7 +378,7 @@ func TestHandleSendMessageByID(t *testing.T) {
 
 	runSendMessageTest(t, validInputTC, app, Handler{Message: successfulTCMessageStore{}, Friend: mockFriendStore{}})
 	runSendMessageTest(t, invalidInputTC, app, Handler{Message: successfulTCMessageStore{}, Friend: mockFriendStore{}})
-	runSendMessageTest(t, messageStoreErrorTC, app, Handler{Message: addMessageErrorTCMessageStore{}, Friend: mockFriendStore{}})
+	runSendMessageTest(t, messageStoreErrorTC, app, Handler{Message: errorTCMessageStore{}, Friend: mockFriendStore{}})
 }
 
 type testCaseSendMessage struct {
@@ -363,3 +407,305 @@ func runSendMessageTest(t *testing.T, tc testCaseSendMessage, app *gofr.Gofr, h 
 		assert.IsType(t, tc.expected, result, "TEST: %s: unexpected result type", tc.desc)
 	}
 }
+
+func TestHandleSendMessageByPhoneNumber(t *testing.T) {
+	app := gofr.New()
+
+	validInputTC := testCaseSendMessageByPhoneNumber{
+		desc:     "send message by phone number success",
+		body:     []byte(`{"recipientPhoneNumber":1234567890,"content":"Hello, World!"}`),
+		userID:   "testUserID",
+		expected: types.Raw{},
+		err:      nil,
+	}
+
+	invalidInputTC := testCaseSendMessageByPhoneNumber{
+		desc: "invalid input",
+		body: []byte(`invalidjson`),
+		err:  e.HttpStatusError(400, "Invalid inputs or missing required fields -json: unknown field \"invalidjson\""),
+	}
+
+	messageStoreErrorTC := testCaseSendMessageByPhoneNumber{
+		desc:   "message store error",
+		body:   []byte(`{"recipientPhoneNumber":1234567890,"content":"Hello, World!"}`),
+		userID: "testUserID",
+		err:    e.HttpStatusError(500, "message store error"),
+	}
+
+	recipientNotFoundTC := testCaseSendMessageByPhoneNumber{
+		desc:   "recipient not found",
+		body:   []byte(`{"recipientPhoneNumber":1234567890,"content":"Hello, World!"}`),
+		userID: "testUserID",
+		err:    e.HttpStatusError(404, "Recipient does not exists"),
+	}
+
+	runSendMessageByPhoneNumberTest(t, validInputTC, app, Handler{Message: successfulTCMessageStore{}, Friend: mockFriendStore{}, Auth: newMockAuthStore()})
+	runSendMessageByPhoneNumberTest(t, invalidInputTC, app, Handler{Message: successfulTCMessageStore{}, Friend: mockFriendStore{}, Auth:newMockAuthStore()})
+	runSendMessageByPhoneNumberTest(t, messageStoreErrorTC, app, Handler{Message: errorTCMessageStore{}, Friend: mockFriendStore{}, Auth:newMockAuthStore()})
+	runSendMessageByPhoneNumberTest(t, recipientNotFoundTC, app, Handler{Message: successfulTCMessageStore{}, Friend: mockFriendStore{}, Auth: userNotExistsTCmockAuthStore{}})
+}
+
+type testCaseSendMessageByPhoneNumber struct {
+	desc     string
+	body     []byte
+	userID   string
+	expected interface{}
+	err      error
+}
+
+func runSendMessageByPhoneNumberTest(t *testing.T, tc testCaseSendMessageByPhoneNumber, app *gofr.Gofr, h Handler) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "http://dummy", bytes.NewReader(tc.body))
+
+	req := request.NewHTTPRequest(r)
+	res := responder.NewContextualResponder(w, r)
+	ctx := gofr.NewContext(res, req, app)
+	*&ctx.Context = context.WithValue(context.Background(), "userId", "someUserId")
+
+	result, err := h.HandleSendMessageByPhoneNumber(ctx)
+
+	if tc.err != nil {
+		assert.Error(t, err, "TEST: %s: unexpected error", tc.desc)
+	} else {
+		assert.NoError(t, err, "TEST: Unexpected Error: %s", tc.desc)
+		assert.IsType(t, tc.expected, result, "TEST: %s: unexpected result type", tc.desc)
+	}
+}
+
+func TestHandleGetMessage(t *testing.T) {
+	app := gofr.New()
+
+	validInputTC := testCaseGetDeleteMessage{
+		desc:     "get message success",
+		messageID: "testMessageID",
+		userID:    "testUserID",
+		expected:  types.Raw{},
+		err:       nil,
+	}
+
+	missingParameterTC := testCaseGetDeleteMessage{
+		desc:     "missing parameter",
+		messageID: "",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(400, "Missing Parameter messageId"),
+	}
+
+	messageNotFoundErrorTC := testCaseGetDeleteMessage{
+		desc:     "message not found",
+		messageID: "nonexistentMessageID",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(404, "Message does not exists"),
+	}
+	messageStoreErrorTC := testCaseGetDeleteMessage{
+		desc:      "message store error",
+		messageID: "testMessageID",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(500, "message store error"),
+	}
+	authorizationErrorTC := testCaseGetDeleteMessage{
+		desc:     "authorization error",
+		messageID: "unauthorizedMessageID",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(403, "You are not authorized to see that message"),
+	}
+
+	runGetMessageTest(t, validInputTC, app, Handler{Message: successfulTCMessageStore{}})
+	runGetMessageTest(t, missingParameterTC, app, Handler{Message: successfulTCMessageStore{}})
+	runGetMessageTest(t, messageNotFoundErrorTC, app, Handler{Message: errorTCMessageStore{}})
+	runGetMessageTest(t, messageStoreErrorTC, app, Handler{Message: messageStoreErrorTCMessageStore{}})
+	runGetMessageTest(t, authorizationErrorTC, app, Handler{Message: authorizationErrorTCMessageStore{}})
+}
+
+type testCaseGetDeleteMessage struct {
+	desc      string
+	messageID string
+	userID    string
+	expected  interface{}
+	err       error
+}
+
+func runGetMessageTest(t *testing.T, tc testCaseGetDeleteMessage, app *gofr.Gofr, h Handler) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "http://dummy",nil)
+
+	req := request.NewHTTPRequest(r)
+	res := responder.NewContextualResponder(w, r)
+	ctx := gofr.NewContext(res, req, app)
+	*&ctx.Context = context.WithValue(context.Background(), "userId", "someUserId")
+	
+	if tc.desc!="missing parameter"{
+		ctx.SetPathParams(map[string]string{"id":"someOtherUserId"})
+	}
+
+	result, err := h.HandleGetMessage(ctx)
+
+	if tc.err != nil {
+		assert.Error(t, err, "TEST: %s: unexpected error", tc.desc)
+	} else {
+		assert.NoError(t, err, "TEST: Unexpected Error: %s", tc.desc)
+		assert.IsType(t, tc.expected, result, "TEST: %s: unexpected result type", tc.desc)
+	}
+}
+
+
+type testCasePutMessage struct {
+	desc      string
+	body      []byte
+	messageID string
+	userID    string
+	expected  interface{}
+	err       error
+}
+func TestHandlePutMessage(t *testing.T) {
+	app := gofr.New()
+
+
+	validInputTC := testCasePutMessage{
+		desc:     "update message success",
+		body:     []byte(`{"content":"Updated content"}`),
+		messageID: "testMessageID",
+		userID:    "testUserID",
+		expected:  types.Raw{},
+		err:       nil,
+	}
+	invalidBodyTC := testCasePutMessage{
+		desc:      "invalid request body",
+		body:      []byte(`invalidjson`),
+		messageID: "testMessageID",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(400, "Invalid inputs or missing required fields -json: cannot unmarshal string into Go struct field UpdateMessageRequest.content of type model.Content"),
+	}
+
+	missingParameterTC := testCasePutMessage{
+		desc:      "missing parameter",
+		body:      []byte(`{"content":"Updated content"}`),
+		messageID: "",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(400, "Missing Parameter messageId"),
+	}
+
+	messageNotFoundErrorTC := testCasePutMessage{
+		desc:      "message not found",
+		body:      []byte(`{"content":"Updated content"}`),
+		messageID: "nonexistentMessageID",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(404, "Message does not exists"),
+	}
+	messageStoreErrorTC := testCasePutMessage{
+		desc:      "message store error",
+		body:      []byte(`{"content":"Updated content"}`),
+		messageID: "testMessageID",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(500, "message store error"),
+	}
+	authorizationErrorTC := testCasePutMessage{
+		desc:      "authorization error",
+		body:      []byte(`{"content":"Updated content"}`),
+		messageID: "unauthorizedMessageID",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(403, "You are not authorized to update that message"),
+	}
+
+	runPutMessageTest(t, validInputTC, app, Handler{Message: successfulTCMessageStore{}})
+	runPutMessageTest(t, invalidBodyTC, app, Handler{Message: successfulTCMessageStore{}})
+	runPutMessageTest(t, missingParameterTC, app, Handler{Message: successfulTCMessageStore{}})
+	runPutMessageTest(t, messageNotFoundErrorTC, app, Handler{Message: errorTCMessageStore{}})
+	runPutMessageTest(t, messageStoreErrorTC, app, Handler{Message: messageStoreErrorTCMessageStore{}})
+	runPutMessageTest(t, authorizationErrorTC, app, Handler{Message: authorizationErrorTCMessageStore{}})
+
+}
+
+func runPutMessageTest(t *testing.T, tc testCasePutMessage, app *gofr.Gofr, h Handler) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "http://dummy", bytes.NewReader(tc.body))
+
+	req := request.NewHTTPRequest(r)
+	res := responder.NewContextualResponder(w, r)
+	ctx := gofr.NewContext(res, req, app)
+	*&ctx.Context = context.WithValue(context.Background(), "userId", "someUserId")
+	
+	if tc.desc!="missing parameter"{
+		ctx.SetPathParams(map[string]string{"id":"someOtherUserId"})
+	}
+
+	result, err := h.HandlePutMessage(ctx)
+
+	if tc.err != nil {
+		assert.Error(t, err, "TEST: %s: unexpected error", tc.desc)
+	} else {
+		assert.NoError(t, err, "TEST: Unexpected Error: %s", tc.desc)
+		assert.IsType(t, tc.expected, result, "TEST: %s: unexpected result type", tc.desc)
+	}
+}
+
+
+func TestHandleDeleteMessage(t *testing.T) {
+	app := gofr.New()
+
+	validInputTC := testCaseGetDeleteMessage{
+		desc:     "delete message success",
+		messageID: "testMessageID",
+		userID:    "testUserID",
+		err:       nil,
+	}
+
+	missingParameterTC := testCaseGetDeleteMessage{
+		desc:     "missing parameter",
+		messageID: "",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(400, "Missing Parameter messageId"),
+	}
+
+	messageNotFoundErrorTC := testCaseGetDeleteMessage{
+		desc:     "message not found",
+		messageID: "nonexistentMessageID",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(404, "Message does not exists"),
+	}
+	messageStoreErrorTC := testCaseGetDeleteMessage{
+		desc:      "message store error",
+		messageID: "testMessageID",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(500, "message store error"),
+	}
+	authorizationErrorTC := testCaseGetDeleteMessage{
+		desc:     "authorization error",
+		messageID: "unauthorizedMessageID",
+		userID:    "testUserID",
+		err:       e.HttpStatusError(403, "You are not authorized to see that message"),
+	}
+
+	runDeleteMessageTest(t, validInputTC, app, Handler{Message: successfulTCMessageStore{}})
+	runDeleteMessageTest(t, missingParameterTC, app, Handler{Message: successfulTCMessageStore{}})
+	runDeleteMessageTest(t, messageNotFoundErrorTC, app, Handler{Message: errorTCMessageStore{}})
+	runDeleteMessageTest(t, messageStoreErrorTC, app, Handler{Message: messageStoreErrorTCMessageStore{}})
+	runDeleteMessageTest(t, authorizationErrorTC, app, Handler{Message: authorizationErrorTCMessageStore{}})
+}
+
+
+
+func runDeleteMessageTest(t *testing.T, tc testCaseGetDeleteMessage, app *gofr.Gofr, h Handler) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "http://dummy",nil)
+
+	req := request.NewHTTPRequest(r)
+	res := responder.NewContextualResponder(w, r)
+	ctx := gofr.NewContext(res, req, app)
+	*&ctx.Context = context.WithValue(context.Background(), "userId", "someUserId")
+	
+	if tc.desc!="missing parameter"{
+		ctx.SetPathParams(map[string]string{"id":"someOtherUserId"})
+	}
+
+	result, err := h.HandleDeleteMessage(ctx)
+
+	if tc.err != nil {
+		assert.Error(t, err, "TEST: %s: unexpected error", tc.desc)
+	} else {
+		assert.NoError(t, err, "TEST: Unexpected Error: %s", tc.desc)
+		assert.IsType(t, tc.expected, result, "TEST: %s: unexpected result type", tc.desc)
+	}
+}
+
+
+

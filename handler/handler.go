@@ -287,13 +287,11 @@ func WithJWTAuth(handlerFunc gofr.Handler, authStore store.AuthStore) gofr.Handl
 }
 
 func extractToken(ctx *gofr.Context) (string, error) {
-	// Get the Authorization header
 	authHeader := ctx.Header("Authorization")
 	if authHeader == "" {
 		return "", fmt.Errorf("Authorization header missing")
 	}
 
-	// The header should be in the format "Bearer <token>"
 	splitToken := strings.Split(authHeader, " ")
 	if len(splitToken) != 2 || strings.ToLower(splitToken[0]) != "bearer" {
 		return "", fmt.Errorf("Invalid Authorization header format")
