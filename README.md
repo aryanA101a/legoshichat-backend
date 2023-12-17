@@ -13,7 +13,7 @@ Also checkout the **postman collection** in the [docs](https://github.com/aryanA
 ## Roadmap
 - [x] API Spec
 - [x] API Implementation
-- [ ] Unit Testing **30%**
+- [ ] Unit Testing **60% <**
 - [ ] CI
 - [ ] CD
 
@@ -23,9 +23,11 @@ Also checkout the **postman collection** in the [docs](https://github.com/aryanA
 
 2. `go run .`
 
+**Run Tests**
+`go test ./... --cover`
+
 **To monitor database**
 `docker exec -it gofr-pgsql psql --username=legoshiuser --dbname=legoshichat`
-
 
 **Note:** In the context of this project, the .env file is intentionally exposed publicly; however, it is crucial to emphasize that this practice is strongly discouraged in a production environment
 
