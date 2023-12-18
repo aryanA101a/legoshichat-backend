@@ -13,7 +13,7 @@ Also checkout the **postman collection** in the [docs](https://github.com/aryanA
 ## Roadmap
 - [x] API Spec
 - [x] API Implementation
-- [ ] Unit Testing **60% <**
+- [x] Unit Testing **60% <**
 - [ ] CI
 - [ ] CD
 
